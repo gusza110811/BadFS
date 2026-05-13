@@ -1,9 +1,10 @@
+#!/bin/python3
 # first prototype, only one table
 
 from io import BufferedRandom
 import struct
 import shlex
-import os
+import os, sys
 
 class BadFS:
     def __init__(self, disk:BufferedRandom):
@@ -15,6 +16,7 @@ class BadFS:
     
     def save_table(self):
         self.write(-1,self.encode_table(self.table))
+        self.disk.flush()
     
     def decode_table(self,raw_table:bytearray):
         def get_name(pos):
@@ -49,6 +51,7 @@ class BadFS:
         
         self.disk.seek((index+2)*512)
         self.disk.write(data)
+        self.disk.flush()
 
     def delete(self,index):
         self.table[index] = ""
@@ -76,13 +79,13 @@ class BadFS:
         self.load_table()
         return index
 
-def test_interactive():
+def test_interactive(disk_name="disk.img"):
 
-    if not os.path.isfile("disk.img"):
-        disk = open("disk.img","wb+")
-        disk.write(bytes(512*33))
+    if not os.path.isfile(disk_name):
+        disk = open(disk_name,"wb+")
+        disk.write(bytes(512*34))
     else:
-        disk = open("disk.img","rb+")
+        disk = open(disk_name,"rb+")
     fs = BadFS(disk)
 
     while 1:
@@ -133,4 +136,8 @@ def test_interactive():
             print("not enough parameter")
 
 if __name__ == "__main__":
-    test_interactive()
+    if len(sys.argv) >= 2:
+        disk = sys.argv[1]
+    else:
+        disk = "disk.img"
+    test_interactive(disk)
