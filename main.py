@@ -79,15 +79,7 @@ class BadFS:
         self.load_table()
         return index
 
-def test_interactive(disk_name="disk.img"):
-
-    if not os.path.isfile(disk_name):
-        disk = open(disk_name,"wb+")
-        disk.write(bytes(512*34))
-    else:
-        disk = open(disk_name,"rb+")
-    fs = BadFS(disk)
-
+def interactive(fs):
     while 1:
         command, *args = shlex.split(input("> "))
         try:
@@ -137,7 +129,63 @@ def test_interactive(disk_name="disk.img"):
 
 if __name__ == "__main__":
     if len(sys.argv) >= 2:
-        disk = sys.argv[1]
+        disk_name = sys.argv[1]
     else:
-        disk = "disk.img"
-    test_interactive(disk)
+        disk_name = "disk.img"
+    
+    if len(sys.argv) >= 3:
+        command = sys.argv[2]
+        args = sys.argv[3:]
+    else:
+        command = "interactive"
+        args = []
+
+    if not os.path.isfile(disk_name):
+        disk = open(disk_name,"wb+")
+        disk.write(bytes(512*34))
+    else:
+        disk = open(disk_name,"rb+")
+    fs = BadFS(disk)
+
+    try:
+        match command:
+            case "interactive":
+                interactive(fs)
+            case "ls":
+                print("\n".join([item for item in fs.list() if item]))
+            case "cat":
+                index = fs.find(args[0])
+                if index is None:
+                    print("not found")
+                print(fs.read(index))
+            case "rm":
+                index = fs.find(args[0])
+                fs.delete(index)
+            case "touch":
+                index = fs.find(args[0])
+                if index is None:
+                    index = fs.add_file(args[0])
+
+                fs.write(index,input("< ").encode())
+            case "import":
+                source = args[0]
+                dest = args[1]
+                data = open(source,"rb").read()
+                index = fs.find(dest)
+                if index is None:
+                    index = fs.add_file(dest)
+                fs.write(index,data)
+            case "export":
+                source = args[0]
+                dest = args[1]
+
+                index = fs.find(source)
+                if index is None:
+                    print("not found")
+                data = fs.read(index)
+
+                with open(dest,"wb") as file:
+                    file.write(data)
+    
+    except IndexError:
+        print("not enough parameter")
